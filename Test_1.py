@@ -4,10 +4,11 @@ import random
 import pygame
 from pygame.locals import *
 
+#Inisiasi untuk memulai engine pygame
 pygame.init()
 
 '''IMAGE'''
-
+#Mendefinisikan asset nama file gambar untuk objek yang dipakau di dalam game
 player_ship = 'plyshp.png'
 enemy_ship = 'enemyshp.png'
 ufo_ship = 'ufoshp.png'
@@ -16,7 +17,7 @@ enemy_bullet = 'enemybullet.png'
 ufo_bullet = 'ufobullet.png'
 
 '''SOUND'''
-
+#Mendefinisikan asset nama file sound effect dan musik latar
 laser_sound = pygame.mixer.Sound('laser.wav')
 explosion_sound = pygame.mixer.Sound('expl sound.mp3')
 game_over_sound = pygame.mixer.Sound('game_over.wav')
@@ -24,14 +25,18 @@ game_over_music = pygame.mixer.Sound('game over.mp3')
 
 background_music = pygame.mixer.Sound('latar musik.mp3')
 
+#Untuk memulai sistem audio pygame
 pygame.mixer.init()
 
+#Untuk mengatur rasio layar yang digunakan secara Fullscreen
 screen = pygame.display.set_mode((0, 0), FULLSCREEN)
-s_width, s_height = screen.get_size()
+s_width, s_height = screen.get_size() #Untuk mengambil ukuran lebar dan tinggi layar
 
+#Untuk mengatur kecepatan frame (FPS) agar game bisa berjalan stabil
 clock = pygame.time.Clock()
 FPS = 60
 
+#Membuat pengelompokkan berbagai objek
 bacground_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
@@ -44,9 +49,11 @@ particle_group = pygame.sprite.Group()
 
 sprite_group = pygame.sprite.Group()
 
-pygame.mouse.set_visible(False)
+pygame.mouse.set_visible(False) #Untuk menyembunyikan kursor mouse saat permainan
 
+#Pengelompokkan latar belakang
 class Background(pygame.sprite.Sprite):
+    #Class untuk latar belakang yang bergerak
     def __init__(self, x, y):
         super().__init__()
 
@@ -56,19 +63,22 @@ class Background(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def update(self):
+        #untuk pergerakan secara diagonal ke kanan bawah
         self.rect.y += 1
         self.rect.x += 1
+        #Jika sudah melewati layar penuh, kembali ke atas dengan posisi acak
         if self.rect.y > s_height:
             self.rect.y = random.randrange(-10, 0)
             self.rect.x = random.randrange(-400, s_width)
 
 class Particle(Background):
+    #Class untuk partikel
     def __init__(self, x, y):
         super().__init__(x,y)
         self.rect.x = random.randrange(0, s_width)
         self.rect.y = random.randrange(0, s_height)
         self.image.fill('grey')
-        self.vel = random.randint(3,8)
+        self.vel = random.randint(3,8) #Untuk emngatur kecepatan jatuh partikel secara acak
 
     def update(self):
         self.rect.y += self.vel
@@ -77,26 +87,30 @@ class Particle(Background):
             self.rect.y = random.randrange(0, s_width)
 
 class player(pygame.sprite.Sprite):
+    #Class untuk pesawat pemain
     def __init__(self, img):
         super().__init__()
         self.image = pygame.image.load(img)
         self.rect = self.image.get_rect()
-        self.image.set_colorkey('black')
+        self.image.set_colorkey('black') #Untuk menghapus latar hitam pada gambar
         self.alive = True
         self.count_to_live = 0
         self.activate_bullet = True
-        self.alpha_duration = 0
+        self.alpha_duration = 0 #untuk efek transparan
 
     def update(self):
         if self.alive:
+            #Untuk efek transparan saat respawn
             self.image.set_alpha(80)
             self.alpha_duration += 1
             if self.alpha_duration > 170:
-                self.image.set_alpha(255)
+                self.image.set_alpha(255) #Untuk kembali solid setelah beberapa saat
+            #Untuk pesawat bergerak mengikuti posisi kursor Mouse
             mouse = pygame.mouse.get_pos()
             self.rect.x = mouse[0] - 20
             self.rect.y = mouse[1] + 40
         else:
+            #untuk menyembunyikan pesawat dan buat ledakan saat mati
             self.alpha_duration = 0
             expl_x = self.rect.x + 20
             expl_y = self.rect.y + 40
@@ -104,14 +118,16 @@ class player(pygame.sprite.Sprite):
             explosion_group.add(explosion)
             sprite_group.add(explosion)
             pygame.time.delay(22)
-            self.rect.y = s_height + 200
+            self.rect.y = s_height + 200 #Untuk pesawat pindah keluar layar
             self.count_to_live += 1
+            #Untuk timer respawn
             if self.count_to_live > 100:
                 self.alive = True
                 self.count_to_live = 0
                 self.activate_bullet = True
 
     def shoot(self):
+        #Untuk logika menembak pada pemain
         if self.activate_bullet:   
             bullet = PlayerBullet(player_bullet)
             mouse = pygame.mouse.get_pos()
@@ -121,25 +137,31 @@ class player(pygame.sprite.Sprite):
             sprite_group.add(bullet)
 
     def dead(self):
+        #Untuk pesawat pemain tertembak dan menabrak
         pygame.mixer.Sound.play(explosion_sound)
         self.alive = False
         self.activate_bullet = False
     
 class Enemy(player):
+    #CLass untuk musuh biasa
     def __init__(self, img):
         super().__init__(img)
+        #Untuk posisi awal musuk diacak di atas layar
         self.rect.x = random.randrange(80, s_width - 80)
         self.rect.y = random.randrange(-500, 0)
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
     def update(self):
+        #Untuk musuh bergerak ke bawah layar
         self.rect.y += 1
         if self.rect.y > s_height:
+            #Untuk musuh kembali ke atas jika tembus layar
             self.rect.x = random.randrange(0, s_width)
             self.rect.y = random.randrange(-2000, 0)
         self.shoot()
 
     def shoot(self):
+        #Untuk musuh menembak secara otomatis di titik koordinat Y tertentu
         if self.rect.y in (0, 30,70,100, 300, 700):
             enemybullet = EnemyBullet(enemy_bullet)
             enemybullet.rect.x = self.rect.x
@@ -148,21 +170,24 @@ class Enemy(player):
             sprite_group.add(enemybullet)
 
 class Ufo(Enemy):
+    #Untuk musuh tipe UFO
     def __init__(self, img):
         super().__init__(img)
         self.rect.x = -200
         self.rect.y = 200
-        self.move = 1
+        self.move = 1 #Untuk arah gerak secara horizontal
 
     def update(self):
+        #Untuk UFO bergerak ke kanan dan kiri
         self.rect.x += self.move
         if self.rect.x > s_width + 200:
-            self.move *= -1
+            self.move *= -1 #untuk balik arah
         elif self.rect.x < -200:
             self.move *= -1
         self.shoot()
 
     def shoot(self):
+        #Untuk UFO menembak setiap kali posisi X-nya habis dibagi 50
         if self.rect.x % 50 == 0:
             ufobullet = EnemyBullet(ufo_bullet)
             ufobullet.rect.x = self.rect.x + 50
